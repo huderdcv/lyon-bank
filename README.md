@@ -50,6 +50,7 @@ A production-ready **Modular Monolith** designed to handle high-concurrency fina
 | `POST` | `/api/auth/register`         | Create a new user (Default role: CLIENT)     |
 | `POST` | `/api/auth/login`            | Returns a signed JWT (Bearer Token)          |
 | `POST` | `/api/accounts`              | Open a new Bank Account (Auto-generated CCI) |
+| `GET`  | `/api/accounts`              | Get all the accounts of the user             |
 | `POST` | `/api/transactions/transfer` | Atomic money transfer between accounts       |
 
 ---

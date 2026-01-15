@@ -12,7 +12,7 @@
     <artifactId>lyon-bank</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>lyon-bank</name>
-    <description>A simple banking application built with Spring that handles basic account management and
+    <description>A banking application built with Spring that handles basic account management and
         transactions.
     </description>
     <url/>
