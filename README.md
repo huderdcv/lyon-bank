@@ -1,58 +1,86 @@
-# LyonBank Core - High-Performance Banking Engine
+# 🏦 LyonBank Core: High-Performance Banking Engine
 
-A production-ready **Modular Monolith** designed to handle high-concurrency financial transactions securely. This project simulates a core banking backend with strict compliance to ACID properties and Security standards.
+[![Java](https://img.shields.io/badge/Java-21_LTS-ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org/)
+[![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.4+-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Security](https://img.shields.io/badge/Security-OAuth2_RSA-red)](https://spring.io/projects/spring-security)
+[![Architecture](https://img.shields.io/badge/Architecture-Modular_Monolith-blue)](https://martinfowler.com/bliki/MonolithFirst.html)
+[![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 
-## Key Features
+> **Production-ready backend simulating a core banking system with strict ACID compliance.**
 
-### 1. High-Concurrency Transaction Engine
+## 📖 About The Project
 
-- **Problem:** Double-spending attacks and race conditions during simultaneous transfers.
-- **Solution:** Implemented **Pessimistic Locking** (`SELECT ... FOR UPDATE`) in PostgreSQL via JPA. This ensures atomic balance updates even under heavy load.
-- **Tech:** Java 21, Spring Data JPA, PostgreSQL.
+**LyonBank Core** is a robust financial transaction engine designed to solve the hardest problems in fintech: **concurrency** and **security**.
 
-### 2. Bank-Grade Security (OAuth2 + RSA)
+This project handles high-concurrency money transfers using **Pessimistic Locking** (Database-level locks) to prevent "Double-Spending" attacks. It is architected as a **Modular Monolith** using **Domain-Driven Design (DDD)** principles, making it ready for microservices migration.
 
-- **Stateless Auth:** implemented using **Spring Security 6** resource server.
-- **Asymmetric Signing:** JWTs are signed with a private RSA key and verified with a public key, preventing secret-key leakage vulnerabilities.
-- **RBAC (Role-Based Access Control):** Granular permissions for `CLIENT`, `ADMIN`, and `AUDITOR`.
+## ⚙️ Key Technical Features
 
-### 3. Domain-Driven Design (Feature-Based)
+### 1. ⚡ High-Concurrency Transaction Engine
 
-- Unlike traditional layered architectures (Controller/Service/Dao), this project uses a **Feature-Based Packaging** strategy (`features.accounts`, `features.transactions`).
-- **Benefit:** High modularity. Each feature is self-contained, making it easier to refactor into Microservices in the future.
+- **Problem:** Race conditions during simultaneous transfers (e.g., Alice sends money to Bob and Charlie at the exact same millisecond).
+- **Solution:** Implemented `Pessimistic Locking` (`SELECT ... FOR UPDATE`) in PostgreSQL via Spring Data JPA.
+- **Result:** Guarantees atomic balance updates and strict ACID compliance under heavy load.
 
-## Tech Stack
+### 2. 🔐 Bank-Grade Security (OAuth2 + RSA)
 
-- **Language:** Java 21 (LTS)
+- **Stateless Auth:** Powered by **Spring Security 6** Resource Server.
+- **Asymmetric Signing:** JWTs are signed with a private RSA key and verified with a public key. This prevents secret-key leakage vulnerabilities common in symmetric (HS256) setups.
+- **RBAC:** Granular permissions for `CLIENT`, `ADMIN`, and `AUDITOR`.
+
+### 3. 🧩 Modular Architecture (DDD)
+
+- **Feature-Based Packaging:** Code is organized by domain (`features.accounts`, `features.transactions`) rather than technical layers.
+- **Benefit:** Enforces separation of concerns and simplifies future extraction into Microservices.
+
+## 🛠️ Tech Stack
+
+- **Language:** Java 21 (LTS) - Records, Pattern Matching
 - **Framework:** Spring Boot 3.4+
 - **Database:** PostgreSQL 16
-- **Security:** OAuth2 / RSA
-- **Build Tool:** Maven
-- **Development:** Docker
+- **Security:** OAuth2 / JWT / RSA Encryption
+- **Build:** Maven & Docker Compose
 
-## How to Run
+## 🚀 Getting Started
 
-1.  **Start Database:**
+### Prerequisites
+
+- Docker & Docker Compose
+- Java 21 SDK
+
+### Installation
+
+1.  **Clone the repository**
+
+    ```bash
+    git clone https://github.com/huderdcv/lyonbank-core.git
+    ```
+
+2.  **Start the Database**
+
     ```bash
     docker-compose up -d
     ```
-2.  **Generate RSA Keys (One-time setup):**
-    The application expects `private.pem` and `public.pem` in `src/main/resources/certs`.
-3.  **Run Application:**
+
+3.  **Generate RSA Keys**
+
+    - Place your `private.pem` and `public.pem` in `src/main/resources/certs`.
+
+4.  **Run the Application**
     ```bash
     ./mvnw spring-boot:run
     ```
 
-## API Endpoints (Postman)
+## 🔌 API Endpoints
 
 | Method | Endpoint                     | Description                                  |
 | :----- | :--------------------------- | :------------------------------------------- |
 | `POST` | `/api/auth/register`         | Create a new user (Default role: CLIENT)     |
-| `POST` | `/api/auth/login`            | Returns a signed JWT (Bearer Token)          |
+| `POST` | `/api/auth/login`            | Returns a signed RSA-JWT (Bearer Token)      |
 | `POST` | `/api/accounts`              | Open a new Bank Account (Auto-generated CCI) |
 | `GET`  | `/api/accounts`              | Get all the accounts of the user             |
-| `POST` | `/api/transactions/transfer` | Atomic money transfer between accounts       |
+| `POST` | `/api/transactions/transfer` | **Atomic money transfer** (Thread-safe)      |
 
----
+## 👥 Contact
 
-_Built by Huder DC._
+Huder De La Cruz Vasquez
