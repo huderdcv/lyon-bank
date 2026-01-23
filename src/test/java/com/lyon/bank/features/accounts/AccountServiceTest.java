@@ -6,6 +6,7 @@ import com.lyon.bank.features.security.UserEntity;
 import com.lyon.bank.features.security.UserRepository;
 import com.lyon.bank.shared.enums.RoleEnum;
 import lombok.RequiredArgsConstructor;
+import org.junit.Assert;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentMatchers;
@@ -18,9 +19,7 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 @ExtendWith(MockitoExtension.class)
 //@RequiredArgsConstructor
@@ -120,7 +119,61 @@ public class AccountServiceTest {
 
     // verifying that never try to save
     Mockito.verify(accountRepository, Mockito.never()).save(ArgumentMatchers.any());
+  }
 
+  @Test
+  @DisplayName("Receive all the accounts when authenticated user exists")
+  void findAllAccountsWhenUserExists(){
+    // 1.ARRANGE
+    String username = "usernameTest";
+    UserEntity mockUser = UserEntity.builder()
+      .id(1L).username(username).build();
+    AccountEntity mockAccount = AccountEntity.builder()
+      .accountNumber("12345678901234")
+      .balance(BigDecimal.TEN)
+      .id(100L).build();
+    List<AccountEntity> accounts = new ArrayList<>(List.of(mockAccount));
+
+    // preparing mocks
+    Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+    Mockito.when(authentication.getName()).thenReturn(username);
+    Mockito.when(userRepository.findByUsername(username)).thenReturn(Optional.of(mockUser));
+    Mockito.when(accountRepository.findByUserId(mockUser.getId())).thenReturn(accounts);
+
+    // 2. ACT
+    List<AccountDTO> accountsInDb = accountService.getMyAccounts();
+
+    // 3. ASSERT
+    Assertions.assertNotNull(accountsInDb);
+    Assertions.assertEquals(1, accounts.size());
+
+    AccountDTO accountDTO = accountsInDb.getFirst();
+    Assertions.assertEquals(BigDecimal.TEN, accountDTO.balance());
+    Assertions.assertEquals(mockAccount.getAccountNumber(), accountDTO.accountNumber());
+
+
+    Mockito.verify(accountRepository).findByUserId(mockUser.getId());
+  }
+
+  @Test
+  @DisplayName("Should throw exception when authenticated user is not found in DB")
+  void shouldThrowExceptionGetMyAccountsWhenUserNotFound(){
+    // 1. ARRANGE
+    String username = "usernameTest";
+
+    Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+    Mockito.when(authentication.getName()).thenReturn(username);
+    Mockito.when(userRepository.findByUsername(username)).thenReturn(Optional.empty());
+
+    // 2. ACT
+    Exception exception = Assertions.assertThrows(RuntimeException.class, () -> {
+      accountService.getMyAccounts();
+    });
+
+    // 3. ASSERT
+    Assertions.assertEquals("User not found", exception.getMessage());
+
+    Mockito.verify(accountRepository, Mockito.never()).findByUserId(ArgumentMatchers.any());
   }
 
 }
