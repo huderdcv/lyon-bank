@@ -62,7 +62,7 @@ public class AccountServiceTest {
     Mockito.when(securityContext.getAuthentication())
       .thenReturn(authentication);
     Mockito.when(authentication.getName())
-        .thenReturn(usernameTest);
+      .thenReturn(usernameTest);
 
     // simulate the behavior if user exists in db
     Mockito.when(userRepository.findByUsername(usernameTest))
@@ -70,8 +70,11 @@ public class AccountServiceTest {
 
     // simulate the creation of a account
     Mockito.when(accountRepository.save(ArgumentMatchers.any(AccountEntity.class)))
-      .thenAnswer( invocation -> {
+      .thenAnswer(invocation -> {
         AccountEntity accountToSave = invocation.getArgument(0);
+        if(accountToSave.getUser() == null) {
+          throw new RuntimeException("User was not set on AccountEntity");
+        }
         accountToSave.setId(100L);
         return accountToSave;
       });
@@ -96,7 +99,7 @@ public class AccountServiceTest {
 
   @Test
   @DisplayName("Should throw exception when authenticated user is not found in DB")
-  void shouldThrowExceptionWhenUserNotFound(){
+  void shouldThrowExceptionWhenUserNotFound() {
 
     // 1.ARRANGE
     String usernameTest = "usernameTest";
@@ -112,7 +115,7 @@ public class AccountServiceTest {
     // 2. ACT
     Exception exception = Assertions.assertThrows(RuntimeException.class, () -> {
       accountService.createAccount();
-    }) ;
+    });
 
     // 3. ASSERT
     Assertions.assertEquals("Authenticated user not found", exception.getMessage());
@@ -123,7 +126,7 @@ public class AccountServiceTest {
 
   @Test
   @DisplayName("Receive all the accounts when authenticated user exists")
-  void findAllAccountsWhenUserExists(){
+  void findAllAccountsWhenUserExists() {
     // 1.ARRANGE
     String username = "usernameTest";
     UserEntity mockUser = UserEntity.builder()
@@ -145,7 +148,7 @@ public class AccountServiceTest {
 
     // 3. ASSERT
     Assertions.assertNotNull(accountsInDb);
-    Assertions.assertEquals(1, accounts.size());
+    Assertions.assertEquals(1, accountsInDb.size());
 
     AccountDTO accountDTO = accountsInDb.getFirst();
     Assertions.assertEquals(BigDecimal.TEN, accountDTO.balance());
@@ -156,8 +159,35 @@ public class AccountServiceTest {
   }
 
   @Test
+  @DisplayName("Should return empty list when user exists but has no accounts")
+  void shouldReturnEmptyListWhenUserHasNoAccounts() {
+    // 1. ARRANGE
+    String username = "usernameTest";
+    Long userId = 1L;
+    UserEntity userMock = UserEntity.builder()
+      .id(userId)
+      .username(username)
+      .build();
+    List<AccountEntity> accounts = new ArrayList<>();
+
+    Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+    Mockito.when(authentication.getName()).thenReturn(username);
+    Mockito.when(userRepository.findByUsername(username)).thenReturn(Optional.of(userMock));
+    Mockito.when(accountRepository.findByUserId(userId)).thenReturn(accounts);
+
+    // 2. ACT
+    List<AccountDTO> accountDTOSInDB = accountService.getMyAccounts();
+
+    // 3. ASSERT
+    Assertions.assertNotNull(accountDTOSInDB);
+    Assertions.assertTrue(accountDTOSInDB.isEmpty());
+
+    Mockito.verify(accountRepository).findByUserId(userId);
+  }
+
+  @Test
   @DisplayName("Should throw exception when authenticated user is not found in DB")
-  void shouldThrowExceptionGetMyAccountsWhenUserNotFound(){
+  void shouldThrowExceptionGetMyAccountsWhenUserNotFound() {
     // 1. ARRANGE
     String username = "usernameTest";
 
@@ -175,5 +205,6 @@ public class AccountServiceTest {
 
     Mockito.verify(accountRepository, Mockito.never()).findByUserId(ArgumentMatchers.any());
   }
+
 
 }
