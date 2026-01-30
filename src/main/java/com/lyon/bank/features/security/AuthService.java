@@ -1,10 +1,15 @@
 package com.lyon.bank.features.security;
 
-import com.lyon.bank.features.security.dtos.RegisterRequest;
-import com.lyon.bank.features.security.dtos.RegisterResponse;
+import com.lyon.bank.features.security.dtos.*;
+import com.lyon.bank.security.config.JwtProperties;
+import com.lyon.bank.security.jwt.TokenService;
 import com.lyon.bank.shared.enums.RoleEnum;
 import com.lyon.bank.shared.exceptions.DuplicateResourceException;
+import com.lyon.bank.shared.exceptions.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,13 +20,17 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+  private static final String TOKEN_TYPE = "Bearer";
 
   private final UserRepository userRepository;
   private final RoleRepository roleRepository;
   private final PasswordEncoder passwordEncoder;
+  private final AuthenticationManager authenticationManager;
+  private final TokenService tokenService;
+  private final JwtProperties jwtProperties;
 
-  @Transactional
-  public RegisterResponse register(RegisterRequest request) {
+  @Transactional(rollbackFor = Exception.class)
+  public UserSummary register(RegisterRequest request) {
     // 1. Validate duplicates
     if (userRepository.existsByUsername(request.username())) {
       throw new DuplicateResourceException("Username already exists");
@@ -41,15 +50,36 @@ public class AuthService {
       .build();
 
     UserEntity userDb = userRepository.save(user);
-    return mapUserEntityToRegisterResponse(userDb);
+    return mapUserEntityToUserSummary(userDb);
+  }
+
+  public LoginResponse login(LoginRequest request){
+    // authenticate
+    Authentication authentication = authenticationManager.authenticate(
+      new UsernamePasswordAuthenticationToken(request.username(), request.password())
+    );
+
+    // generate token
+    String token = tokenService.generateToken(authentication);
+
+    // find user to return some values
+    UserEntity user = userRepository.findByUsername(request.username())
+      .orElseThrow(() -> new ResourceNotFoundException("Username not found"));
+
+    return new LoginResponse(
+      token,
+      TOKEN_TYPE,
+      jwtProperties.expiration(),
+      mapUserEntityToUserSummary(user)
+    );
   }
 
   // -- HELPERS
-  private RegisterResponse mapUserEntityToRegisterResponse(UserEntity user) {
+  private UserSummary mapUserEntityToUserSummary(UserEntity user) {
     Set<String> roleNames = user.getRoles().stream()
-      .map(r -> r.getName() != null ? r.getName().name() : "UNKNOW")
+      .map(r -> r.getName() != null ? r.getName().name() : "UNKNOWN")
       .collect(Collectors.toSet());
-    return new RegisterResponse(
+    return new UserSummary(
       user.getId(),
       user.getUsername(),
       user.getEmail(),
