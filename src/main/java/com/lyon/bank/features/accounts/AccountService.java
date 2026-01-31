@@ -3,6 +3,7 @@ package com.lyon.bank.features.accounts;
 import com.lyon.bank.features.accounts.dtos.AccountDTO;
 import com.lyon.bank.features.security.UserEntity;
 import com.lyon.bank.features.security.UserRepository;
+import com.lyon.bank.shared.exceptions.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -17,21 +18,24 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AccountService {
 
+  private static final String CCI_NUMBER = "002"; // 002 is bank code for this project
+
   private final AccountRepository accountRepository;
   private final UserRepository userRepository;
 
+  // -- CREATE ACCOUNT
   @Transactional
   public AccountDTO createAccount() {
-    // 1. Get Logged-in User from JWT
-    String username = SecurityContextHolder.getContext().getAuthentication().getName();
+    // verify authentication and find user
+    String username = getUsername();
     UserEntity user = userRepository.findByUsername(username)
-      .orElseThrow(() -> new RuntimeException("Authenticated user not found"));
+      .orElseThrow(() -> new ResourceNotFoundException("Authenticated user not found"));
 
-    // 2. Generate Unique Numbers
+    // generate unique numbers
     String accNumber = generateRandomString(14);
-    String cci = "002" + generateRandomString(17); // 002 is bank code for this project
+    String cci = CCI_NUMBER + generateRandomString(17);
 
-    // 3. Create Account
+    // create the account
     AccountEntity account = AccountEntity.builder()
       .accountNumber(accNumber)
       .cci(cci)
@@ -39,24 +43,27 @@ public class AccountService {
       .user(user)
       .build();
 
-    AccountEntity saved = accountRepository.save(account);
-
-    return mapToDTO(saved);
+    // save in db and answer in dto
+    AccountEntity accountInDB = accountRepository.save(account);
+    return mapToDTO(accountInDB);
   }
 
+  // -- FIND ACCOUNTS
   @Transactional(readOnly = true)
   public List<AccountDTO> getMyAccounts() {
-    String username = SecurityContextHolder.getContext().getAuthentication().getName();
-    // We find the user first to ensure security, or query accounts by username if joined
-    UserEntity user = userRepository.findByUsername(username)
-      .orElseThrow(() -> new RuntimeException("User not found"));
+    // get the username of the authentication
+    String username = getUsername();
 
-    return accountRepository.findByUserId(user.getId()).stream()
+    // find in db and answer in dto
+    return accountRepository.findByUser_Username(username).stream()
       .map(this::mapToDTO)
       .collect(Collectors.toList());
   }
 
-  // --- Helpers ---
+  // --- HELPERS
+  private String getUsername(){
+    return SecurityContextHolder.getContext().getAuthentication().getName();
+  }
 
   private AccountDTO mapToDTO(AccountEntity entity) {
     return new AccountDTO(
@@ -67,7 +74,7 @@ public class AccountService {
     );
   }
 
-  //TODO: I can improve this
+  //TODO: Resolve collision risk
   private String generateRandomString(int length) {
     StringBuilder sb = new StringBuilder();
     for (int i = 0; i < length; i++) {
